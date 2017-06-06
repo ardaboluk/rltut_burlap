@@ -1,9 +1,12 @@
 package source;
 
+import java.util.List;
+
+import burlap.behavior.policy.Policy;
+import burlap.behavior.singleagent.EpisodeAnalysis;
 import burlap.behavior.singleagent.planning.stochastic.valueiteration.ValueIteration;
 import burlap.domain.singleagent.graphdefined.GraphDefinedDomain;
 import burlap.oomdp.auxiliary.DomainGenerator;
-import burlap.oomdp.auxiliary.common.NullTermination;
 import burlap.oomdp.core.Domain;
 import burlap.oomdp.core.TerminalFunction;
 import burlap.oomdp.core.states.State;
@@ -36,9 +39,8 @@ public class DieN {
 		this.dg = new GraphDefinedDomain(this.numStates);
 		this.setTransitions();
 		this.domain = this.dg.generateDomain();
-		this.initState = GraphDefinedDomain.getState(this.domain, 0);
 		this.rf = new MyRewards(isBadSide);
-		this.tf = new NullTermination();
+		this.tf = new MyTerminals(isBadSide);
 		this.hashFactory = new DiscretizingHashableStateFactory(0.5);
 
 	}
@@ -65,29 +67,35 @@ public class DieN {
 		((GraphDefinedDomain)this.dg).setTransition(numStates - 1, 1, numStates - 1, 1);
 
 	}
-
-	// plans from a given state
-	private ValueIteration computeValue(double gamma){
-
-		double maxDelta = 0.001;
-		int maxIterations = 1000;
-
-		ValueIteration vi = new ValueIteration(this.domain, this.rf, this.tf, gamma, this.hashFactory, maxDelta, maxIterations);
-
-		vi.planFromState(this.initState);
-
-		return vi;				
-	}
-
-	// plans from a given state returns the value of that state
-	private double valueOfState(int state, double gamma){
-
-		return computeValue(gamma).value(GraphDefinedDomain.getState(this.domain, state));
-	}
 	
 	public double expectedValue(){
 		
-		return valueOfState(0, this.gamma);
+		double maxDelta = 0.001;
+		int maxIterations = 1000;
+		
+		double totalReward = 0;
+		
+		ValueIteration vi = new ValueIteration(this.domain, this.rf, this.tf, this.gamma, this.hashFactory, maxDelta, maxIterations);
+		
+		// plan from each state in order and compute average total reward
+		for(int i = 0; i < numStates - 1; i++){
+			
+			double curTotalReward = 0;
+			
+			Policy curPolicy = vi.planFromState(GraphDefinedDomain.getState(this.domain, i));
+			EpisodeAnalysis ea = curPolicy.evaluateBehavior(GraphDefinedDomain.getState(this.domain, i), this.rf, this.tf);
+			
+			List<Double> rewardList = ea.rewardSequence;
+			for(int j = 0; j < rewardList.size(); j++){
+				
+				curTotalReward += rewardList.get(j);
+			}
+			
+			System.out.println("Total reward from state " + i + " is: " + curTotalReward);
+			totalReward += curTotalReward;
+		}		
+		
+		return totalReward / (this.numStates - 1);
 	}
 
 	class MyRewards implements RewardFunction{
@@ -127,12 +135,40 @@ public class DieN {
 
 	}
 	
+	class MyTerminals implements TerminalFunction{
+		
+		private boolean [] isBadSide;
+		
+		public MyTerminals(boolean [] isBadSide){
+			
+			this.isBadSide = isBadSide;
+		}
+
+		@Override
+		public boolean isTerminal(State s) {
+			
+			int s_id = GraphDefinedDomain.getNodeId(s);
+			
+			/*if(s_id == this.isBadSide.length){
+				return true;
+			}*/
+			
+			if(s_id == this.isBadSide.length || this.isBadSide[s_id] == true){
+				
+				return true;
+			}
+			
+			return false;
+		}
+		
+	}
+	
 	public static void main(String[] args){
 
-		//boolean [] badSides = {false, false, false, true, false, false};
-		//DieN d = new DieN(6, badSides);
-		boolean [] badSides = {true,false,false,true,false,true,false,true,true,true,false,true,false,true,true,true,false,true,false,true};
-		DieN d = new DieN(20, badSides);
+		boolean [] badSides = {false, false, false, true, false, false};
+		DieN d = new DieN(6, badSides);
+		//boolean [] badSides = {true,false,false,true,false,true,false,true,true,true,false,true,false,true,true,true,false,true,false,true};
+		//DieN d = new DieN(20, badSides);
 
 		System.out.println(d.expectedValue());
 	}
