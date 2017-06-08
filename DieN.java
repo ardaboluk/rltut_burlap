@@ -1,12 +1,11 @@
 package source;
 
-import java.util.List;
-
-import burlap.behavior.policy.Policy;
+import burlap.behavior.policy.GreedyQPolicy;
 import burlap.behavior.singleagent.EpisodeAnalysis;
 import burlap.behavior.singleagent.planning.stochastic.valueiteration.ValueIteration;
 import burlap.domain.singleagent.graphdefined.GraphDefinedDomain;
 import burlap.oomdp.auxiliary.DomainGenerator;
+import burlap.oomdp.auxiliary.common.NullTermination;
 import burlap.oomdp.core.Domain;
 import burlap.oomdp.core.TerminalFunction;
 import burlap.oomdp.core.states.State;
@@ -20,6 +19,9 @@ public class DieN {
 	private int numActions;
 	private double gamma;
 	private boolean [] isBadSide;
+	
+	private double currentReward;
+	private int curStateId;
 
 	DomainGenerator dg;
 	Domain domain;
@@ -27,6 +29,8 @@ public class DieN {
 	RewardFunction rf;
 	TerminalFunction tf;
 	DiscretizingHashableStateFactory hashFactory;
+	
+	private ValueIteration vi;
 
 	public DieN(int numSides, boolean [] isBadSide){
 
@@ -34,13 +38,16 @@ public class DieN {
 		this.numActions = 2;	// 0 for roll and 1 for quit
 		this.isBadSide = isBadSide;
 		
-		this.gamma = .5;
+		currentReward = 0;
+		
+		this.gamma = .6;
 
 		this.dg = new GraphDefinedDomain(this.numStates);
 		this.setTransitions();
 		this.domain = this.dg.generateDomain();
 		this.rf = new MyRewards(isBadSide);
-		this.tf = new MyTerminals(isBadSide);
+		//this.tf = new MyTerminals(isBadSide);
+		this.tf = new NullTermination();
 		this.hashFactory = new DiscretizingHashableStateFactory(0.5);
 
 	}
@@ -68,34 +75,39 @@ public class DieN {
 
 	}
 	
+	public String actionToTake(int score){
+		
+		return "roll";
+	}
+	
 	public double expectedValue(){
 		
 		double maxDelta = 0.001;
 		int maxIterations = 1000;
 		
-		double totalReward = 0;
+		double expectedDiscountedTotalReward = 0;
 		
-		ValueIteration vi = new ValueIteration(this.domain, this.rf, this.tf, this.gamma, this.hashFactory, maxDelta, maxIterations);
+		vi = new ValueIteration(this.domain, this.rf, this.tf, this.gamma, this.hashFactory, maxDelta, maxIterations);
 		
-		// plan from each state in order and compute average total reward
+		// plan from each state in order to get the average expected value
 		for(int i = 0; i < numStates - 1; i++){
 			
-			double curTotalReward = 0;
+			State curInitialState = GraphDefinedDomain.getState(this.domain, i);
+			vi.planFromState(curInitialState);
+			expectedDiscountedTotalReward += vi.value(curInitialState);
+			System.out.println(vi.value(curInitialState));
 			
-			Policy curPolicy = vi.planFromState(GraphDefinedDomain.getState(this.domain, i));
-			EpisodeAnalysis ea = curPolicy.evaluateBehavior(GraphDefinedDomain.getState(this.domain, i), this.rf, this.tf);
-			
-			List<Double> rewardList = ea.rewardSequence;
-			for(int j = 0; j < rewardList.size(); j++){
+			/*for(int j = 0; j < numStates - 1; j++){
 				
-				curTotalReward += rewardList.get(j);
-			}
+				State curValueState = GraphDefinedDomain.getState(this.domain, j);
+				System.out.println(vi.value(curInitialState));
+				expectedDiscountedTotalReward += vi.value(curValueState);
+			}*/			
 			
-			System.out.println("Total reward from state " + i + " is: " + curTotalReward);
-			totalReward += curTotalReward;
-		}		
+			System.out.println("---------------------------------------");
+		}
 		
-		return totalReward / (this.numStates - 1);
+		return expectedDiscountedTotalReward / (this.numStates - 3);
 	}
 
 	class MyRewards implements RewardFunction{
@@ -116,6 +128,7 @@ public class DieN {
 
 			if(id_s == numStates - 1 || id_sprime == numStates - 1){
 				
+				currentReward = 0;
 				return 0;
 			}
 			
@@ -123,9 +136,13 @@ public class DieN {
 
 				if(this.isBadSide[id_sprime] == true){
 
+					//System.out.println("Bad side value: " + -vi.value(GraphDefinedDomain.getState(domain, curStateId)));
+					//return -vi.value(GraphDefinedDomain.getState(domain, curStateId));
 					return 0;
+					
 				}else if(id_sprime < numStates - 1){
 
+					//currentReward += id_sprime + 1;
 					return id_sprime + 1; 
 				}
 			}
@@ -135,7 +152,7 @@ public class DieN {
 
 	}
 	
-	class MyTerminals implements TerminalFunction{
+	/*class MyTerminals implements TerminalFunction{
 		
 		private boolean [] isBadSide;
 		
@@ -149,10 +166,6 @@ public class DieN {
 			
 			int s_id = GraphDefinedDomain.getNodeId(s);
 			
-			/*if(s_id == this.isBadSide.length){
-				return true;
-			}*/
-			
 			if(s_id == this.isBadSide.length || this.isBadSide[s_id] == true){
 				
 				return true;
@@ -161,7 +174,7 @@ public class DieN {
 			return false;
 		}
 		
-	}
+	}*/
 	
 	public static void main(String[] args){
 
@@ -170,6 +183,6 @@ public class DieN {
 		//boolean [] badSides = {true,false,false,true,false,true,false,true,true,true,false,true,false,true,true,true,false,true,false,true};
 		//DieN d = new DieN(20, badSides);
 
-		System.out.println(d.expectedValue());
+		System.out.println("Expected total return: " + d.expectedValue());
 	}
 }
