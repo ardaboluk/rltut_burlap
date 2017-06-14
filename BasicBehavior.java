@@ -24,7 +24,9 @@ import burlap.oomdp.core.objects.ObjectInstance;
 import burlap.oomdp.core.states.State;
 import burlap.oomdp.singleagent.RewardFunction;
 import burlap.oomdp.singleagent.common.UniformCostRF;
+import burlap.oomdp.singleagent.common.VisualActionObserver;
 import burlap.oomdp.singleagent.environment.Environment;
+import burlap.oomdp.singleagent.environment.EnvironmentServer;
 import burlap.oomdp.singleagent.environment.SimulatedEnvironment;
 import burlap.oomdp.statehashing.HashableStateFactory;
 import burlap.oomdp.statehashing.SimpleHashableStateFactory;
@@ -63,6 +65,11 @@ public class BasicBehavior {
 		
 		// set up the environment for learning algorithms
 		env = new SimulatedEnvironment(domain, rf, tf, initialState);
+		
+		VisualActionObserver observer = new VisualActionObserver(domain, GridWorldVisualizer.getVisualizer(gwdg.getMap()));
+		observer.initGUI();
+		env = new EnvironmentServer(env, observer);
+		//((SADomain)domain).addActionObserverForAllAction(observer);
 	}
 	
 	public void visualize(String outputPath){
@@ -127,12 +134,14 @@ public class BasicBehavior {
 		// run learning for  50 episodes
 		for(int i = 0; i < 50; i++){
 			
-			EpisodeAnalysis ea = agent.runLearningEpisode(env);
+			/*EpisodeAnalysis ea = agent.runLearningEpisode(env);
 			
 			ea.writeToFile(outputPath + "ql_" + i);
 			System.out.println(i + ": " + ea.maxTimeStep());
 			
 			// reset environment for next learning episode
+			env.resetEnvironment();*/
+			agent.runLearningEpisode(env);
 			env.resetEnvironment();
 		}
 	}
@@ -160,15 +169,15 @@ public class BasicBehavior {
 		String outputPath = "output/";	// directory to record results
 		
 		// run example
-		example.BFSExample(outputPath);
-		example.DFSExample(outputPath);
-		example.AStarExample(outputPath);
-		example.valueIterationExample(outputPath);
+		//example.BFSExample(outputPath);
+		//example.DFSExample(outputPath);
+		//example.AStarExample(outputPath);
+		//example.valueIterationExample(outputPath);
 		example.QLearningExample(outputPath);
-		example.SarsaLearningExample(outputPath);
+		//example.SarsaLearningExample(outputPath);
 		
 		// run the visualizer
-		example.visualize(outputPath);
+		//example.visualize(outputPath);
 	}
 
 }
