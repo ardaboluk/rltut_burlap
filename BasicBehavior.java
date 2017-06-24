@@ -278,7 +278,7 @@ public class BasicBehavior {
 	public static void main(String args[]){
 		
 		BasicBehavior example = new BasicBehavior();
-		String outputPath = "output/";	// directory to record results
+		String outputPath = "output/";	// directory for recording results
 		
 		// run example
 		//example.BFSExample(outputPath);

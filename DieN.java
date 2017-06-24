@@ -25,7 +25,7 @@ import burlap.oomdp.statehashing.SimpleHashableStateFactory;
 
 public class DieN implements DomainGenerator{
 	
-	// current money the player accumulated
+	// current money the player has accumulated
 	// in this setting, states are based on how much money the player has and the state of the game
 	public static final String ATTMONEY = "money";
 	// game state: true if ended

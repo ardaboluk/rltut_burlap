@@ -92,7 +92,7 @@ public class VITutorial extends burlap.behavior.singleagent.MDPSolver implements
 		double q = 0.;
 		for(TransitionProbability tp : tps){
 			
-			// what is reward for this transition ?
+			// what is the reward for this transition ?
 			double r = this.rf.reward(s, ga, tp.s);
 			
 			// what is the value for the next state ?

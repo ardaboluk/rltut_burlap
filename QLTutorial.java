@@ -58,7 +58,7 @@ public class QLTutorial extends burlap.behavior.singleagent.MDPSolver implements
 
 	@Override
 	public List<QValue> getQs(State s) {
-		// first get hashed state
+		// first, get hashed state
 		HashableState sh = this.hashingFactory.hashState(s);
 		
 		// check if we already have stored values
